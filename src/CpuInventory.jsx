@@ -7,6 +7,18 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
   const [isAuditen, setIsAuditen] = useState(false);
   const [error, setError] = useState('');
 
+  const getAcqOptions = () => {
+    const fixed = ['TIM', 'Affix', 'Estoque'];
+    const dynamic = rooms ? rooms.map(r => r.name) : [];
+    
+    const map = new Map();
+    fixed.forEach(f => map.set(f.toLowerCase(), f));
+    dynamic.forEach(d => map.set(d.toLowerCase(), d));
+    
+    return Array.from(map.values());
+  };
+  const acqOptions = getAcqOptions();
+
   // Estados de Edição
   const [editingCpu, setEditingCpu] = useState(null);
   const [editCode, setEditCode] = useState('');
@@ -98,11 +110,8 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
             style={{flex: 1, minWidth: '200px'}}
           />
           <select value={newAcq} onChange={(e) => setNewAcq(e.target.value)} className="premium-input" style={{width: '150px'}}>
-            <option value="TIM">TIM</option>
-            <option value="Affix">Affix</option>
-            <option value="Estoque">Estoque</option>
-            {rooms && rooms.map(r => (
-              <option key={r.id} value={r.name}>{r.name}</option>
+            {acqOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
           <label className="flex items-center gap-2 cursor-pointer" style={{background: 'var(--input-bg)', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
@@ -167,11 +176,8 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
               <div className="input-group">
                 <label>Aquisição</label>
                 <select className="premium-input" value={editAcq} onChange={e => setEditAcq(e.target.value)}>
-                  <option value="TIM">TIM</option>
-                  <option value="Affix">Affix</option>
-                  <option value="Estoque">Estoque</option>
-                  {rooms && rooms.map(r => (
-                    <option key={r.id} value={r.name}>{r.name}</option>
+                  {acqOptions.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
               </div>
