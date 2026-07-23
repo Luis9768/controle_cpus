@@ -1,0 +1,51 @@
+.card {
+  background-color: var(--surface-color);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.custom-select {
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  outline: none;
+}
+
+.cpu-item {
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  background-color: var(--bg-color);
+}
+
+.acq-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 10px;
+}
+
+.acq-tim { background-color: #dbeafe; color: #1e40af; }
+.acq-affix { background-color: #fce7f3; color: #9d174d; }
+
+[data-theme='dark'] .acq-tim { background-color: #1e3a8a; color: #bfdbfe; }
+[data-theme='dark'] .acq-affix { background-color: #831843; color: #fbcfe8; }
+
+.location-badge {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+  border-radius: 4px;
+  padding: 4px 8px;
+}

@@ -1,0 +1,60 @@
+.pa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pa-slot {
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.pa-slot.free {
+  background-color: var(--pa-free);
+}
+
+.pa-slot.occupied {
+  background-color: var(--pa-occupied);
+  border: 2px solid var(--primary-color);
+  border-style: solid;
+}
+
+.pa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.pa-empty-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.cpu-drag-item {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: grab;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.cpu-drag-item:active {
+  cursor: grabbing;
+}
+
+.badge {
+  display: inline-block;
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
