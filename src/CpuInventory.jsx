@@ -27,18 +27,19 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
 
   const handleAdd = (e) => {
     e.preventDefault();
-    if (!newCode.trim()) {
-      setError('O código da CPU é obrigatório.');
-      return;
+    let finalCode = newCode.trim();
+    if (!finalCode) {
+      finalCode = 'Cpu sem identificação';
     }
-    if (cpus.some(c => c.code === newCode)) {
+
+    if (finalCode !== 'Cpu sem identificação' && cpus.some(c => c.code === finalCode)) {
       setError('Uma CPU com este código já existe.');
       return;
     }
 
     const newCpu = { 
       id: Date.now(), 
-      code: newCode, 
+      code: finalCode, 
       acquisition: newAcq, 
       isAuditen,
       location: 'estoque' 
@@ -74,16 +75,19 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
 
   const saveEdit = (e) => {
     e.preventDefault();
-    if (!editCode.trim()) return alert("O código não pode ficar vazio.");
+    let finalCode = editCode.trim();
+    if (!finalCode) {
+      finalCode = 'Cpu sem identificação';
+    }
     
     // Verificar duplicidade
-    if (cpus.some(c => c.code === editCode && c.id !== editingCpu)) {
+    if (finalCode !== 'Cpu sem identificação' && cpus.some(c => c.code === finalCode && c.id !== editingCpu)) {
       return alert("Já existe outra CPU com este código.");
     }
 
     const updatedCpus = cpus.map(c => {
       if (c.id === editingCpu) {
-        return { ...c, code: editCode, acquisition: editAcq, isAuditen: editAuditen };
+        return { ...c, code: finalCode, acquisition: editAcq, isAuditen: editAuditen };
       }
       return c;
     });
@@ -103,7 +107,7 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
         <form onSubmit={handleAdd} className="flex gap-4 items-center flex-wrap">
           <input 
             type="text" 
-            placeholder="Código da CPU (ex: CPU-001)" 
+            placeholder="Código da CPU (deixe em branco se não houver)" 
             value={newCode}
             onChange={(e) => setNewCode(e.target.value)}
             className="premium-input"
