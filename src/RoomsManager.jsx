@@ -132,6 +132,37 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
     updateData({ cpus: newCpus, rooms: newRooms, history: newHistoryList });
   };
 
+  const handleRemoveCpuFromPa = (cpuId) => {
+    const cpu = cpus.find(c => c.id === cpuId);
+    if (!cpu || !selectedRoom) return;
+
+    const oldLocation = cpu.location;
+    const newLocation = 'estoque';
+
+    const newCpus = cpus.map(c => c.id === cpuId ? { ...c, location: newLocation } : c);
+    
+    const newRooms = rooms.map(r => ({
+        ...r,
+        paStatus: r.paStatus.filter(p => p.cpuId !== cpuId)
+    }));
+
+    const newHistoryEntry = {
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      cpuCode: cpu.code,
+      from: oldLocation,
+      to: newLocation
+    };
+    const newHistoryList = [newHistoryEntry, ...history];
+
+    setCpus(newCpus);
+    setRooms(newRooms);
+    setHistory(newHistoryList);
+    setSelectedRoom(newRooms.find(r => r.id === selectedRoom.id));
+    
+    updateData({ cpus: newCpus, rooms: newRooms, history: newHistoryList });
+  };
+
   const handleDragStart = (e, cpuId) => {
     e.dataTransfer.setData("cpuId", cpuId);
   };
@@ -220,8 +251,32 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                       className="cpu-drag-item"
                       draggable
                       onDragStart={(e) => handleDragStart(e, cpuInfo.id)}
+                      style={{ position: 'relative' }}
                     >
                       {cpuInfo.code}
+                      <button 
+                        onClick={() => handleRemoveCpuFromPa(cpuInfo.id)}
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-8px',
+                          background: '#ef4444',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}
+                        title="Devolver ao Estoque"
+                      >
+                        ✕
+                      </button>
                     </div>
                   ) : (
                     <div className="pa-empty-text">Vazio</div>
