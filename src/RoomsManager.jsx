@@ -244,29 +244,31 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                   className={`pa-slot ${occupancy ? 'occupied' : 'free'}`}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, i)}
+                  style={{ position: 'relative' }}
                 >
                   <div className="pa-title">PA {i + 1}</div>
                   {cpuInfo ? (
-                    <div 
-                      className="cpu-drag-item"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, cpuInfo.id)}
-                      style={{ position: 'relative' }}
-                    >
-                      {cpuInfo.code}
+                    <>
+                      <div 
+                        className="cpu-drag-item"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, cpuInfo.id)}
+                      >
+                        {cpuInfo.code}
+                      </div>
                       <button 
                         onClick={() => handleRemoveCpuFromPa(cpuInfo.id)}
                         style={{
                           position: 'absolute',
-                          top: '-6px',
-                          right: '-6px',
+                          top: '-8px',
+                          right: '-8px',
                           background: 'rgba(239, 68, 68, 0.9)',
                           color: '#fff',
-                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          border: '2px solid var(--surface-color)',
                           borderRadius: '50%',
-                          width: '18px',
-                          height: '18px',
-                          fontSize: '10px',
+                          width: '24px',
+                          height: '24px',
+                          fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: 'pointer',
                           display: 'flex',
@@ -274,7 +276,7 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                           justifyContent: 'center',
                           padding: 0,
                           lineHeight: 1,
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
                           backdropFilter: 'blur(4px)',
                           zIndex: 10
                         }}
@@ -282,7 +284,7 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                       >
                         ✕
                       </button>
-                    </div>
+                    </>
                   ) : (
                     <div className="pa-empty-text">Vazio</div>
                   )}
