@@ -258,20 +258,25 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                         onClick={() => handleRemoveCpuFromPa(cpuInfo.id)}
                         style={{
                           position: 'absolute',
-                          top: '-8px',
-                          right: '-8px',
-                          background: '#ef4444',
+                          top: '-6px',
+                          right: '-6px',
+                          background: 'rgba(239, 68, 68, 0.9)',
                           color: '#fff',
-                          border: 'none',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
                           borderRadius: '50%',
-                          width: '20px',
-                          height: '20px',
-                          fontSize: '12px',
+                          width: '18px',
+                          height: '18px',
+                          fontSize: '10px',
+                          fontWeight: 'bold',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          padding: 0,
+                          lineHeight: 1,
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                          backdropFilter: 'blur(4px)',
+                          zIndex: 10
                         }}
                         title="Devolver ao Estoque"
                       >
