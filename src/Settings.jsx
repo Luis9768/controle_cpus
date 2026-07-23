@@ -60,7 +60,7 @@ export default function Settings({ cpus, rooms, history, usersList, updateData }
           cpus: restored.cpus || [], 
           rooms: restored.rooms || [], 
           history: restored.history || [],
-          users: restored.users || []
+          users: (restored.users && restored.users.length > 0) ? restored.users : usersList
         });
         showStatus('Base de dados restaurada com sucesso!');
       }
