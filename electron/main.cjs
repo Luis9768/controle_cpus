@@ -33,7 +33,7 @@ function initDB() {
     try {
       data = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
       let needsSave = false;
-      if (!data.users) {
+      if (!data.users || data.users.length === 0) {
         data.users = defaultData.users;
         needsSave = true;
       }

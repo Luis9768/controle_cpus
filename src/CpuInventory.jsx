@@ -26,7 +26,7 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
   const [editAuditen, setEditAuditen] = useState(false);
 
   const handleAdd = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     let finalCode = newCode.trim();
     if (!finalCode) {
       finalCode = 'Cpu sem identificação';
@@ -104,12 +104,13 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
       <div className="card add-cpu-card">
         <h3>Cadastrar Nova CPU</h3>
         {error && <div className="error-message" style={{marginBottom: '10px'}}>{error}</div>}
-        <form onSubmit={handleAdd} className="flex gap-4 items-center flex-wrap">
+        <div className="flex gap-4 items-center flex-wrap">
           <input 
             type="text" 
             placeholder="Código da CPU (deixe em branco se não houver)" 
             value={newCode}
             onChange={(e) => setNewCode(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
             className="premium-input"
             style={{flex: 1, minWidth: '200px'}}
           />
@@ -122,14 +123,14 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
             <input type="checkbox" checked={isAuditen} onChange={e => setIsAuditen(e.target.checked)} />
             Auditen
           </label>
-          <button type="submit" className="primary btn-glow">Adicionar CPU</button>
-        </form>
+          <button onClick={handleAdd} className="primary btn-glow">Adicionar CPU</button>
+        </div>
       </div>
 
       <div className="card list-cpu-card mt-4">
         <h3>CPUs Cadastradas ({cpus.length})</h3>
         <div className="cpu-grid mt-4">
-          {cpus.map(cpu => (
+          {[...cpus].reverse().map(cpu => (
             <div key={cpu.id} className="cpu-item flex flex-col justify-between" style={{padding: '16px', background: 'var(--input-bg)', border: '1px solid var(--border-color)', borderRadius: '12px'}}>
               <div className="flex items-center justify-between mb-2">
                 <strong style={{fontSize: '1.2rem'}}>{cpu.code}</strong>
