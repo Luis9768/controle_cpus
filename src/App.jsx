@@ -147,6 +147,7 @@ function App() {
         {activeTab === 'inventory' && (
           <CpuInventory 
             cpus={cpus} setCpus={setCpus} 
+            rooms={rooms}
             updateData={updateData} 
           />
         )}

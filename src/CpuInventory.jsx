@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './CpuInventory.css';
 
-export default function CpuInventory({ cpus, setCpus, updateData }) {
+export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
   const [newCode, setNewCode] = useState('');
   const [newAcq, setNewAcq] = useState('TIM');
   const [isAuditen, setIsAuditen] = useState(false);
@@ -100,6 +100,10 @@ export default function CpuInventory({ cpus, setCpus, updateData }) {
           <select value={newAcq} onChange={(e) => setNewAcq(e.target.value)} className="premium-input" style={{width: '150px'}}>
             <option value="TIM">TIM</option>
             <option value="Affix">Affix</option>
+            <option value="Estoque">Estoque</option>
+            {rooms && rooms.map(r => (
+              <option key={r.id} value={r.name}>{r.name}</option>
+            ))}
           </select>
           <label className="flex items-center gap-2 cursor-pointer" style={{background: 'var(--input-bg)', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
             <input type="checkbox" checked={isAuditen} onChange={e => setIsAuditen(e.target.checked)} />
@@ -165,6 +169,10 @@ export default function CpuInventory({ cpus, setCpus, updateData }) {
                 <select className="premium-input" value={editAcq} onChange={e => setEditAcq(e.target.value)}>
                   <option value="TIM">TIM</option>
                   <option value="Affix">Affix</option>
+                  <option value="Estoque">Estoque</option>
+                  {rooms && rooms.map(r => (
+                    <option key={r.id} value={r.name}>{r.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="input-group">
