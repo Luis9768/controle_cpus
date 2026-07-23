@@ -62,7 +62,10 @@ export default function Settings({ cpus, rooms, history, usersList, updateData }
           history: restored.history || [],
           users: (restored.users && restored.users.length > 0) ? restored.users : usersList
         });
-        showStatus('Base de dados restaurada com sucesso!');
+        showStatus('Base de dados restaurada com sucesso! Atualizando tela...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
     }
   };
