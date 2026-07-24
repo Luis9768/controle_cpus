@@ -7,6 +7,15 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomCapacity, setNewRoomCapacity] = useState(24);
 
+  const getStartingPaNumber = (roomId) => {
+    let count = 1;
+    for (let r of rooms) {
+      if (r.id === roomId) break;
+      count += r.capacity;
+    }
+    return count;
+  };
+
   const handleAddRoom = (e) => {
     e.preventDefault();
     if (!newRoomName.trim()) return alert("O nome da sala é obrigatório.");
@@ -89,8 +98,9 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
       return;
     }
 
+    const globalPaNumber = getStartingPaNumber(selectedRoom.id) + paIndex;
     const oldLocation = cpu.location;
-    const newLocation = `${selectedRoom.name} - PA ${paIndex + 1}`;
+    const newLocation = `${selectedRoom.name} - PA ${String(globalPaNumber).padStart(2, '0')}`;
 
     // Update CPU location
     const newCpus = cpus.map(c => c.id === cpuId ? { ...c, location: newLocation } : c);
@@ -237,6 +247,7 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
             {Array.from({ length: selectedRoom.capacity }).map((_, i) => {
               const occupancy = selectedRoom.paStatus.find(p => p.index === i);
               const cpuInfo = occupancy ? cpus.find(c => c.id === occupancy.cpuId) : null;
+              const globalPaNumber = getStartingPaNumber(selectedRoom.id) + i;
               
               return (
                 <div 
@@ -246,7 +257,7 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                   onDrop={(e) => handleDrop(e, i)}
                   style={{ position: 'relative' }}
                 >
-                  <div className="pa-title">PA {i + 1}</div>
+                  <div className="pa-title">PA {String(globalPaNumber).padStart(2, '0')}</div>
                   {cpuInfo ? (
                     <>
                       <div 

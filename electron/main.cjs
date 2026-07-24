@@ -20,8 +20,8 @@ function initDB() {
     ],
     cpus: [],
     rooms: [
-      { id: 1, name: 'Sala 1', capacity: 24, paStatus: [] },
-      { id: 2, name: 'Sala 2', capacity: 28, paStatus: [] }
+      { id: 1, name: 'TIM', capacity: 24, paStatus: [] },
+      { id: 2, name: 'Affix', capacity: 28, paStatus: [] }
     ],
     history: [],
     settings: { theme: 'dark' }
