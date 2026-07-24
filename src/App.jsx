@@ -25,8 +25,20 @@ function App() {
     if (window.electronAPI) {
       window.electronAPI.readDB().then(data => {
         if (data) {
+          let loadedRooms = data.rooms || [];
+          
+          loadedRooms.sort((a, b) => {
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+            if (nameA === 'tim') return -1;
+            if (nameB === 'tim') return 1;
+            if (nameA === 'affix') return -1;
+            if (nameB === 'affix') return 1;
+            return 0;
+          });
+
           setCpus(data.cpus || [])
-          setRooms(data.rooms || [])
+          setRooms(loadedRooms)
           setHistory(data.history || [])
           setUsersList(data.users || [])
           if (data.settings?.theme) {
