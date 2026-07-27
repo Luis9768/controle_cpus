@@ -9,8 +9,13 @@ import { fetchCloudData, saveCloudData } from './supabaseClient'
 import './index.css'
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem('gestao-cpus-user');
+  })
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('gestao-cpus-user');
+    return saved ? JSON.parse(saved) : null;
+  })
   const [theme, setTheme] = useState('dark')
   const [loading, setLoading] = useState(true)
   
@@ -112,11 +117,13 @@ function App() {
   const handleLogin = (loggedUser) => {
     setUser(loggedUser);
     setIsAuthenticated(true);
+    localStorage.setItem('gestao-cpus-user', JSON.stringify(loggedUser));
   };
 
   const handleLogout = () => {
     setUser(null);
     setIsAuthenticated(false);
+    localStorage.removeItem('gestao-cpus-user');
   };
 
   if (loading) {
