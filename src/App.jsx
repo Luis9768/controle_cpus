@@ -5,12 +5,14 @@ import CpuInventory from './CpuInventory'
 import History from './History'
 import Settings from './Settings'
 import UsersManager from './UsersManager'
+import { fetchCloudData, saveCloudData } from './supabaseClient'
 import './index.css'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState(null)
-  const [theme, setTheme] = useState('light')
+  const [theme, setTheme] = useState('dark')
+  const [loading, setLoading] = useState(true)
   
   // Data state
   const [cpus, setCpus] = useState([])
@@ -20,70 +22,116 @@ function App() {
   
   const [activeTab, setActiveTab] = useState('dashboard')
 
+  const applyDataState = (data) => {
+    if (!data) return;
+    let loadedRooms = data.rooms || [];
+    
+    loadedRooms.sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      if (nameA === 'tim') return -1;
+      if (nameB === 'tim') return 1;
+      if (nameA === 'affix') return -1;
+      if (nameB === 'affix') return 1;
+      return 0;
+    });
+
+    setCpus(data.cpus || []);
+    setRooms(loadedRooms);
+    setHistory(data.history || []);
+    setUsersList(data.users || []);
+    if (data.settings?.theme) {
+      setTheme(data.settings.theme);
+      document.documentElement.setAttribute('data-theme', data.settings.theme);
+    }
+  };
+
   useEffect(() => {
-    // Carregar tema e dados iniciais
-    if (window.electronAPI) {
-      window.electronAPI.readDB().then(data => {
-        if (data) {
-          let loadedRooms = data.rooms || [];
-          
-          loadedRooms.sort((a, b) => {
-            const nameA = a.name.toLowerCase();
-            const nameB = b.name.toLowerCase();
-            if (nameA === 'tim') return -1;
-            if (nameB === 'tim') return 1;
-            if (nameA === 'affix') return -1;
-            if (nameB === 'affix') return 1;
-            return 0;
-          });
+    const initData = async () => {
+      setLoading(true);
+      // 1. Tentar buscar da nuvem (Supabase)
+      const cloudData = await fetchCloudData();
+      if (cloudData) {
+        applyDataState(cloudData);
+      } else if (window.electronAPI) {
+        // Fallback local se estiver rodando via Electron desktop
+        const localData = await window.electronAPI.readDB();
+        applyDataState(localData);
+      } else {
+        // Default inicial para sala de TIM e Affix se estiver zerado na nuvem
+        applyDataState({
+          rooms: [
+            { id: 1, name: 'TIM', capacity: 24, paStatus: [] },
+            { id: 2, name: 'Affix', capacity: 28, paStatus: [] }
+          ],
+          cpus: [],
+          history: [],
+          users: [
+            {
+              id: 1,
+              name: 'Luis Miguel',
+              email: 'luis.miguel@headsetbrasil.com',
+              password: 'Headset@2021#$!',
+              role: 'admin'
+            }
+          ]
+        });
+      }
+      setLoading(false);
+    };
 
-          setCpus(data.cpus || [])
-          setRooms(loadedRooms)
-          setHistory(data.history || [])
-          setUsersList(data.users || [])
-          if (data.settings?.theme) {
-            setTheme(data.settings.theme)
-            document.documentElement.setAttribute('data-theme', data.settings.theme)
-          }
-        }
-      })
-    }
-  }, [])
+    initData();
+  }, []);
 
-  const updateData = (newData) => {
+  const updateData = async (newData) => {
+    const payload = {
+      cpus,
+      rooms,
+      history,
+      users: usersList,
+      settings: { theme },
+      ...newData
+    };
+
+    // Salvar na nuvem (Supabase)
+    await saveCloudData(payload);
+
+    // Salvar localmente se for Electron
     if (window.electronAPI) {
-      window.electronAPI.readDB().then(data => {
-        const payload = { ...data, ...newData };
-        window.electronAPI.writeDB(payload);
-      });
+      window.electronAPI.writeDB(payload);
     }
-  }
+  };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    document.documentElement.setAttribute('data-theme', newTheme)
-    
-    if (window.electronAPI) {
-      window.electronAPI.readDB().then(data => {
-        const newData = { ...data, settings: { ...data.settings, theme: newTheme } };
-        window.electronAPI.writeDB(newData);
-      });
-    }
-  }
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    updateData({ settings: { theme: newTheme } });
+  };
 
   const handleLogin = (loggedUser) => {
-    setUser(loggedUser)
-    setIsAuthenticated(true)
-  }
+    setUser(loggedUser);
+    setIsAuthenticated(true);
+  };
 
   const handleLogout = () => {
-    setUser(null)
-    setIsAuthenticated(false)
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="login-container flex items-center justify-center text-center">
+        <div className="glass-card">
+          <h3 className="login-title">Gestão de CPUs</h3>
+          <p className="text-muted mt-2">Conectando ao banco de dados na nuvem...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
@@ -132,16 +180,16 @@ function App() {
         {activeTab === 'dashboard' && (
           <div>
             <h2>Dashboard</h2>
-            <div className="flex gap-4 mt-4">
-              <div className="card flex-1">
+            <div className="flex gap-4 mt-4 flex-wrap">
+              <div className="card flex-1" style={{minWidth: '200px'}}>
                 <h3>Total de Salas</h3>
                 <p style={{fontSize: '2rem', fontWeight: 'bold'}}>{rooms.length}</p>
               </div>
-              <div className="card flex-1">
+              <div className="card flex-1" style={{minWidth: '200px'}}>
                 <h3>CPUs no Estoque</h3>
                 <p style={{fontSize: '2rem', fontWeight: 'bold'}}>{cpus.filter(c => c.location === 'estoque').length}</p>
               </div>
-              <div className="card flex-1">
+              <div className="card flex-1" style={{minWidth: '200px'}}>
                 <h3>Total de CPUs</h3>
                 <p style={{fontSize: '2rem', fontWeight: 'bold'}}>{cpus.length}</p>
               </div>

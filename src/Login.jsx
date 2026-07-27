@@ -1,36 +1,59 @@
 import { useState, useEffect } from 'react';
+import { fetchCloudData, sanitizeInput } from './supabaseClient';
 import './Login.css';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    if (window.electronAPI) {
-      window.electronAPI.readDB().then(data => {
-        if (data && data.users) {
-          setUsers(data.users);
-        }
-      });
-    }
+    const loadUsers = async () => {
+      setLoading(true);
+      const cloudData = await fetchCloudData();
+      if (cloudData && cloudData.users && cloudData.users.length > 0) {
+        setUsers(cloudData.users);
+      } else {
+        // Fallback default admin if first time
+        setUsers([
+          {
+            id: 1,
+            name: 'Luis Miguel',
+            email: 'luis.miguel@headsetbrasil.com',
+            password: 'Headset@2021#$!',
+            role: 'admin'
+          }
+        ]);
+      }
+      setLoading(false);
+    };
+    loadUsers();
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    setError('');
+
+    const cleanEmail = sanitizeInput(email);
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
       setError('Por favor, preencha e-mail e senha.');
       return;
     }
 
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) {
-      setError('Credenciais inválidas.');
+    const foundUser = users.find(
+      u => u.email.toLowerCase() === cleanEmail.toLowerCase() && u.password === cleanPassword
+    );
+
+    if (!foundUser) {
+      setError('E-mail ou senha incorretos.');
       return;
     }
 
-    onLogin(user);
+    onLogin(foundUser);
   };
 
   return (
@@ -45,11 +68,13 @@ export default function Login({ onLogin }) {
           <div className="input-group">
             <label>E-mail Corporativo</label>
             <input 
-              type="email" 
+              type="text" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="exemplo@headsetbrasil.com" 
               className="premium-input"
+              required
+              disabled={loading}
             />
           </div>
           
@@ -61,10 +86,14 @@ export default function Login({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••" 
               className="premium-input"
+              required
+              disabled={loading}
             />
           </div>
           
-          <button type="submit" className="primary btn-glow mt-2 w-full">Entrar no Sistema</button>
+          <button type="submit" className="primary btn-glow mt-2 w-full" disabled={loading}>
+            {loading ? 'Carregando...' : 'Entrar no Sistema'}
+          </button>
         </form>
       </div>
       

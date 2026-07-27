@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { sanitizeInput } from './supabaseClient';
 import './CpuInventory.css';
 
 export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
@@ -27,7 +28,7 @@ export default function CpuInventory({ cpus, setCpus, updateData, rooms }) {
 
   const handleAdd = (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    let finalCode = newCode.trim();
+    let finalCode = sanitizeInput(newCode);
     if (!finalCode) {
       finalCode = 'Cpu sem identificação';
     }
