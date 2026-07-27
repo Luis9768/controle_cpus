@@ -5,8 +5,6 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const BACKUP_ID = 'gestao-cpus-data';
-
 // Helper para sanitizar strings e prevenir ataques XSS
 export function sanitizeInput(str) {
   if (typeof str !== 'string') return str;
@@ -22,28 +20,31 @@ export function sanitizeInput(str) {
   }).trim();
 }
 
-// Buscar dados em tempo real da nuvem (Supabase)
+// Buscar dados da nuvem no Supabase
 export async function fetchCloudData() {
   try {
     const { data, error } = await supabase
       .from('backups')
       .select('data')
-      .eq('id', BACKUP_ID)
-      .single();
+      .limit(1);
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Erro ao buscar dados na nuvem:', error.message);
+    if (error) {
+      console.warn('Supabase busca:', error.message);
       return null;
     }
 
-    return data?.data || null;
+    if (data && data.length > 0) {
+      return data[0].data;
+    }
+
+    return null;
   } catch (err) {
     console.error('Falha de conexão com a nuvem:', err);
     return null;
   }
 }
 
-// Salvar dados em tempo real na nuvem (Supabase)
+// Salvar dados na nuvem no Supabase
 export async function saveCloudData(payload) {
   try {
     const backupData = {
@@ -53,10 +54,7 @@ export async function saveCloudData(payload) {
 
     const { error } = await supabase
       .from('backups')
-      .insert([{
-        id: BACKUP_ID,
-        data: backupData
-      }], { upsert: true });
+      .upsert({ id: 1, data: backupData });
 
     if (error) {
       console.error('Erro ao salvar dados na nuvem:', error.message);

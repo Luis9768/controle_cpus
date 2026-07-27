@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { supabase } from './supabaseClient';
 
 export default function Settings({ cpus, rooms, history, usersList, updateData }) {
   const [statusMsg, setStatusMsg] = useState('');
@@ -12,16 +9,10 @@ export default function Settings({ cpus, rooms, history, usersList, updateData }
   const showStatus = (msg, error = false) => {
     setStatusMsg(msg);
     setIsError(error);
-    setTimeout(() => setStatusMsg(''), 5000);
-  };
-
-  const getClient = () => {
-    return createClient(SUPABASE_URL, SUPABASE_KEY);
   };
 
   const handleBackup = async () => {
     setIsLoading(true);
-    const supabase = getClient();
     showStatus('Sincronizando com a nuvem...');
 
     const backupData = { cpus, rooms, history, users: usersList, timestamp: new Date().toISOString() };
@@ -33,7 +24,11 @@ export default function Settings({ cpus, rooms, history, usersList, updateData }
     setIsLoading(false);
     if (error) {
       console.error(error);
-      showStatus('Erro ao sincronizar. Verifique sua conexão e tente novamente.', true);
+      if (error.code === 'PGRST205') {
+        showStatus('Erro: A tabela "backups" ainda não existe no seu Supabase. Crie a tabela "backups" no SQL Editor do Supabase.', true);
+      } else {
+        showStatus(`Erro ao salvar: ${error.message}`, true);
+      }
     } else {
       showStatus('Backup realizado com sucesso na nuvem!');
     }
@@ -41,20 +36,26 @@ export default function Settings({ cpus, rooms, history, usersList, updateData }
 
   const handleRestore = async () => {
     setIsLoading(true);
-    const supabase = getClient();
     showStatus('Buscando backup na nuvem...');
 
     const { data, error } = await supabase
       .from('backups')
       .select('data')
-      .eq('id', 1)
-      .single();
+      .order('id', { ascending: true })
+      .limit(1);
 
     setIsLoading(false);
-    if (error || !data) {
-      showStatus('Nenhum backup encontrado ou erro ao restaurar.', true);
+    if (error) {
+      console.error(error);
+      if (error.code === 'PGRST205') {
+        showStatus('Erro: A tabela "backups" ainda não foi criada no seu Supabase.', true);
+      } else {
+        showStatus(`Erro na busca: ${error.message}`, true);
+      }
+    } else if (!data || data.length === 0) {
+      showStatus('Nenhum backup encontrado na nuvem.', true);
     } else {
-      const restored = data.data;
+      const restored = data[0].data;
       if (restored) {
         updateData({ 
           cpus: restored.cpus || [], 
