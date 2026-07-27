@@ -7,6 +7,8 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomCapacity, setNewRoomCapacity] = useState(24);
 
+  const [viewingCpuModal, setViewingCpuModal] = useState(null);
+
   const getStartingPaNumber = (roomId) => {
     let count = 1;
     for (let r of rooms) {
@@ -255,7 +257,12 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                   className={`pa-slot ${occupancy ? 'occupied' : 'free'}`}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, i)}
-                  style={{ position: 'relative' }}
+                  onClick={() => {
+                    if (cpuInfo) {
+                      setViewingCpuModal({ cpu: cpuInfo, paNumber: globalPaNumber, roomName: selectedRoom.name });
+                    }
+                  }}
+                  style={{ position: 'relative', cursor: cpuInfo ? 'pointer' : 'default' }}
                 >
                   <div className="pa-title">PA {String(globalPaNumber).padStart(2, '0')}</div>
                   {cpuInfo ? (
@@ -268,7 +275,10 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
                         {cpuInfo.code}
                       </div>
                       <button 
-                        onClick={() => handleRemoveCpuFromPa(cpuInfo.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveCpuFromPa(cpuInfo.id);
+                        }}
                         style={{
                           position: 'absolute',
                           top: '-8px',
@@ -325,6 +335,96 @@ export default function RoomsManager({ cpus, setCpus, rooms, setRooms, history, 
           )}
         </div>
       </div>
+
+      {/* Modal de Detalhes da CPU na PA */}
+      {viewingCpuModal && (
+        <div 
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000
+          }} 
+          onClick={() => setViewingCpuModal(null)}
+        >
+          <div 
+            className="card" 
+            style={{
+              padding: '2rem', maxWidth: '420px', width: '90%', 
+              background: 'var(--surface-color)', border: '1px solid var(--border-color)', 
+              borderRadius: '16px', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 style={{ margin: 0, fontSize: '1.3rem' }}>Detalhes da CPU</h3>
+              <button 
+                onClick={() => setViewingCpuModal(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 mb-6">
+              <div style={{ padding: '12px', background: 'var(--input-bg)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <span className="text-muted text-sm" style={{ display: 'block', marginBottom: '4px' }}>Código da CPU / Identificação</span>
+                <strong style={{ fontSize: '1.2rem', color: viewingCpuModal.cpu.code === 'Cpu sem identificação' ? '#f59e0b' : 'var(--text-color)' }}>
+                  {viewingCpuModal.cpu.code}
+                </strong>
+              </div>
+
+              <div className="flex gap-3">
+                <div style={{ flex: 1, padding: '12px', background: 'var(--input-bg)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <span className="text-muted text-sm" style={{ display: 'block', marginBottom: '4px' }}>Pertence a (Aquisição)</span>
+                  <span style={{
+                    display: 'inline-block', padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 'bold',
+                    background: viewingCpuModal.cpu.acquisition?.toLowerCase() === 'tim' ? '#1e3a8a' : viewingCpuModal.cpu.acquisition?.toLowerCase() === 'affix' ? '#831843' : 'var(--primary-color)',
+                    color: '#fff'
+                  }}>
+                    {viewingCpuModal.cpu.acquisition}
+                  </span>
+                </div>
+
+                <div style={{ flex: 1, padding: '12px', background: 'var(--input-bg)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <span className="text-muted text-sm" style={{ display: 'block', marginBottom: '4px' }}>Flag Auditen</span>
+                  <strong style={{ color: viewingCpuModal.cpu.isAuditen ? '#22c55e' : '#ef4444' }}>
+                    {viewingCpuModal.cpu.isAuditen ? '✅ Auditen' : '❌ Não Auditen'}
+                  </strong>
+                </div>
+              </div>
+
+              <div style={{ padding: '12px', background: 'var(--input-bg)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <span className="text-muted text-sm" style={{ display: 'block', marginBottom: '4px' }}>Localização Atual</span>
+                <strong>{viewingCpuModal.roomName} - PA {String(viewingCpuModal.paNumber).padStart(2, '0')}</strong>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  handleRemoveCpuFromPa(viewingCpuModal.cpu.id);
+                  setViewingCpuModal(null);
+                }}
+                style={{
+                  flex: 1, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', 
+                  border: '1px solid rgba(239, 68, 68, 0.3)', padding: '10px', 
+                  borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
+                }}
+              >
+                Devolver ao Estoque
+              </button>
+              <button 
+                onClick={() => setViewingCpuModal(null)}
+                className="primary btn-glow"
+                style={{ flex: 1, padding: '10px' }}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
