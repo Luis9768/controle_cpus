@@ -222,3 +222,29 @@ button {
     padding: 1.5rem;
   }
 }
+
+/* Badge styling */
+.badge {
+  background-color: var(--primary-color);
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  font-size: 0.9rem;
+}
+
+.badge.danger {
+  background-color: #ef4444;
+}
+
+.badge.warning {
+  background-color: #f59e0b;
+}
+
+.badge.success {
+  background-color: #22c55e;
+}
