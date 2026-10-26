@@ -1,7 +1,22 @@
 import * as XLSX from 'xlsx';
+import { exportToExcel } from './utils/excelExporter';
 import './History.css';
 
+const formatDate = (dateVal) => {
+  if (!dateVal) return '-';
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    return d.toLocaleString('pt-BR');
+  } catch {
+    return String(dateVal);
+  }
+};
+
 export default function History({ history, setHistory, updateData }) {
+
+  // Filtrar apenas histórico de movimentações de CPUs
+  const cpuHistory = (history || []).filter(entry => entry.cpuCode || entry.from || entry.to);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -18,10 +33,10 @@ export default function History({ history, setHistory, updateData }) {
         
         const newEntries = data.map((row, index) => ({
           id: Date.now() + index,
-          date: row.data || row.Date || row.Data || row['Data/Hora'] || new Date().toLocaleString(),
-          cpuCode: row.cpuCode || row.cpu || row.CPU || 'Desconhecido',
-          from: row.from || row.Origem || row.origem || 'N/A',
-          to: row.to || row.Destino || row.destino || 'N/A'
+          date: row.data || row.Date || row.Data || row['Data/Hora'] || row['DATA/HORA'] || new Date().toISOString(),
+          cpuCode: row.cpuCode || row.cpu || row.CPU || row.EQUIPAMENTO || row['CÓDIGO DA CPU'] || 'Desconhecido',
+          from: row.from || row.Origem || row.origem || row.ORIGEM || 'N/A',
+          to: row.to || row.Destino || row.destino || row.DESTINO || 'N/A'
         }));
 
         const mergedHistory = [...newEntries, ...history];
@@ -39,20 +54,14 @@ export default function History({ history, setHistory, updateData }) {
   };
 
   const handleExport = () => {
-    if (history.length === 0) return alert('Não há histórico para exportar.');
-    
-    const dataToExport = history.map(entry => ({
-      'Data/Hora': entry.date,
-      'CPU': entry.cpuCode,
-      'Origem': entry.from,
-      'Destino': entry.to
+    const dataToExport = cpuHistory.map(entry => ({
+      'Data/Hora': formatDate(entry.date),
+      'CPU': entry.cpuCode || '-',
+      'Origem': entry.from || '-',
+      'Destino': entry.to || '-'
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Histórico");
-
-    XLSX.writeFile(workbook, "Historico_Movimentacoes_CPUs.xlsx");
+    exportToExcel(dataToExport, "Historico_Movimentacoes_CPUs.xlsx", "Histórico");
   };
 
   return (
@@ -89,13 +98,13 @@ export default function History({ history, setHistory, updateData }) {
             </tr>
           </thead>
           <tbody>
-            {history.length > 0 ? (
-              history.map(entry => (
+            {cpuHistory.length > 0 ? (
+              cpuHistory.map(entry => (
                 <tr key={entry.id}>
-                  <td>{entry.date}</td>
-                  <td><strong>{entry.cpuCode}</strong></td>
-                  <td><span className="badge badge-outline">{entry.from}</span></td>
-                  <td><span className="badge badge-outline">{entry.to}</span></td>
+                  <td style={{whiteSpace: 'nowrap'}}>{formatDate(entry.date)}</td>
+                  <td><strong>{entry.cpuCode || '-'}</strong></td>
+                  <td><span className="badge badge-outline">{entry.from || '-'}</span></td>
+                  <td><span className="badge badge-outline">{entry.to || '-'}</span></td>
                 </tr>
               ))
             ) : (

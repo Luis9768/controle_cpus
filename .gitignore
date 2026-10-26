@@ -25,3 +25,6 @@ release/
 *.njsproj
 *.sln
 *.sw?
+backend/.env
+backup_*.json
+backend/backup_*.json

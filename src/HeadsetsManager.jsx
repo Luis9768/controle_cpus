@@ -1,9 +1,28 @@
 import { useState, useMemo } from 'react';
-import * as XLSX from 'xlsx';
+import { exportToExcel } from './utils/excelExporter';
 import './History.css';
 
 export default function HeadsetsManager({ stock, setStock, defects, setDefects, history = [], setHistory, updateData }) {
-  const [activeSubTab, setActiveSubTab] = useState('stock'); // 'stock', 'defects', 'history'
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gestao-cpus-headsets-subtab');
+      if (saved && ['stock', 'defects', 'history'].includes(saved)) {
+        return saved;
+      }
+    } catch {
+      // Ignora erro
+    }
+    return 'stock';
+  });
+
+  const handleSubTabChange = (tab) => {
+    setActiveSubTab(tab);
+    try {
+      localStorage.setItem('gestao-cpus-headsets-subtab', tab);
+    } catch {
+      // Ignora erro
+    }
+  };
 
   // Stock Form State
   const [newBrand, setNewBrand] = useState('');
@@ -23,10 +42,9 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const logEvent = (action, brand, qty, details) => {
-    const today = new Date();
-    const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} ${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+    const formattedDate = new Date().toISOString();
     const newEntry = {
-      id: Date.now() + Math.random(),
+      id: Date.now() + Math.floor(Math.random() * 1000),
       date: formattedDate,
       action,
       brand,
@@ -54,7 +72,8 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
 
     setStock(newStock);
     const newHist = logEvent('Entrada Manual', newBrand.trim(), qty, 'Adicionado ao estoque');
-    updateData({ headsetStock: newStock, headsetHistory: newHist });
+    const headsetOnlyHist = newHist.filter(h => h.action || h.brand || h.qty);
+    updateData({ headsetStock: newStock, headsetHistory: headsetOnlyHist, history: newHist });
     setNewBrand('');
     setNewQuantity('');
   };
@@ -69,7 +88,8 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
     });
     setStock(newStock);
     const newHist = logEvent(delta > 0 ? 'Ajuste Manual (+)' : 'Ajuste Manual (-)', stock.find(s => s.id === id).brand, Math.abs(delta), 'Ajuste via botões rápidos');
-    updateData({ headsetStock: newStock, headsetHistory: newHist });
+    const headsetOnlyHist = newHist.filter(h => h.action || h.brand || h.qty);
+    updateData({ headsetStock: newStock, headsetHistory: headsetOnlyHist, history: newHist });
   };
 
   const handleAddDefect = (e) => {
@@ -88,8 +108,7 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
     }
     
     // Format BR Date
-    const today = new Date();
-    const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const formattedDate = new Date().toISOString();
 
     const newDefect = {
       id: Date.now(),
@@ -111,7 +130,8 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
 
     setDefects(newDefectsList);
     const newHist = logEvent('Defeito Registrado', defectBrand, 1, fromOperation ? 'Veio da operação (Sem baixa no estoque)' : 'Baixa no estoque funcional');
-    updateData({ headsetStock: newStock, headsetDefects: newDefectsList, headsetHistory: newHist });
+    const headsetOnlyHist = newHist.filter(h => h.action || h.brand || h.qty);
+    updateData({ headsetStock: newStock, headsetDefects: newDefectsList, headsetHistory: headsetOnlyHist, history: newHist });
     
     setDefectDesc('');
     // Keep brand and box to facilitate multiple entries
@@ -141,8 +161,7 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
     }
 
     // Format BR Date
-    const today = new Date();
-    const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const formattedDate = new Date().toISOString();
 
     // Update defects status
     const newDefects = defects.map(d => {
@@ -159,34 +178,79 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
       if (existing) {
         existing.quantity += 1;
       } else {
-        newStock.push({ id: Date.now() + Math.random(), brand: item.brand.trim(), quantity: 1 });
+        newStock.push({ id: Date.now() + Math.floor(Math.random() * 1000), brand: item.brand.trim(), quantity: 1 });
       }
     });
 
     setStock(newStock);
     setDefects(newDefects);
     const newHist = logEvent('Retorno de Conserto', 'Múltiplos', headsetsToReturn.length, `Caixa ${boxName} recebida`);
-    updateData({ headsetStock: newStock, headsetDefects: newDefects, headsetHistory: newHist });
+    const headsetOnlyHist = newHist.filter(h => h.action || h.brand || h.qty);
+    updateData({ headsetStock: newStock, headsetDefects: newDefects, headsetHistory: headsetOnlyHist, history: newHist });
     alert(`${headsetsToReturn.length} headsets devolvidos ao estoque!`);
   };
 
   const handleExportCSV = () => {
-    if (filteredDefects.length === 0) return alert('Não há dados visíveis para exportar com os filtros atuais.');
-    
     const dataToExport = filteredDefects.map(d => ({
-      'DATA REGISTRO': d.date,
-      'DATA RETORNO': d.returnDate || '-',
+      'DATA REGISTRO': d.date ? new Date(d.date).toLocaleString('pt-BR') : '-',
+      'DATA RETORNO': d.returnDate ? new Date(d.returnDate).toLocaleDateString('pt-BR') : '-',
       'MODELO': d.brand,
       'DEFEITO': d.defect,
       'STATUS': d.status,
       'CAIXA': d.box
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Headsets Danificados");
+    exportToExcel(dataToExport, "headsets_danificados.xlsx", "Headsets Danificados");
+  };
 
-    XLSX.writeFile(workbook, "headsets_danificados.xlsx");
+  const matchesDateFilter = (itemDateStr, itemReturnDateStr, query) => {
+    if (!query) return true;
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+
+    const datesToTest = [];
+    if (itemDateStr) datesToTest.push(new Date(itemDateStr));
+    if (itemReturnDateStr) datesToTest.push(new Date(itemReturnDateStr));
+
+    for (const d of datesToTest) {
+      if (isNaN(d.getTime())) continue;
+
+      const day = String(d.getDate()).padStart(2, '0');
+      const dayNoZero = String(d.getDate());
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const monthNoZero = String(d.getMonth() + 1);
+      const year = String(d.getFullYear());
+      const shortYear = year.slice(-2);
+
+      const brFull = `${day}/${month}/${year}`;            // 28/07/2026
+      const brShort = `${day}/${month}/${shortYear}`;       // 28/07/26
+      const brDayMonth = `${day}/${month}`;                 // 28/07
+      const brDayMonthNoZero = `${dayNoZero}/${monthNoZero}`;// 28/7
+      const brDayOnly = `${day}/`;                          // 28/
+      const brDayNoZeroOnly = `${dayNoZero}/`;              // 28/
+      const isoDate = `${year}-${month}-${day}`;            // 2026-07-28
+
+      const localeStr = d.toLocaleString('pt-BR').toLowerCase();
+      const dateOnlyLocaleStr = d.toLocaleDateString('pt-BR').toLowerCase();
+
+      if (
+        brFull.includes(q) ||
+        brShort.includes(q) ||
+        brDayMonth.includes(q) ||
+        brDayMonthNoZero.includes(q) ||
+        brDayOnly.startsWith(q) ||
+        brDayNoZeroOnly.startsWith(q) ||
+        isoDate.includes(q) ||
+        localeStr.includes(q) ||
+        dateOnlyLocaleStr.includes(q)
+      ) {
+        return true;
+      }
+    }
+
+    const raw1 = String(itemDateStr || '').toLowerCase();
+    const raw2 = String(itemReturnDateStr || '').toLowerCase();
+    return raw1.includes(q) || raw2.includes(q);
   };
 
   const filteredDefects = useMemo(() => {
@@ -195,7 +259,8 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
       result = result.filter(d => d.box.toLowerCase().includes(filterBox.toLowerCase()));
     }
     if (filterDate) {
-      result = result.filter(d => d.date.includes(filterDate));
+      const q = filterDate.trim().toLowerCase();
+      result = result.filter(d => matchesDateFilter(d.date, d.returnDate, q));
     }
     if (filterStatus) {
       result = result.filter(d => d.status === filterStatus);
@@ -220,27 +285,27 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4 headsets-header">
         <h2>Gestão de Headsets</h2>
-        <div className="flex gap-2">
+        <div className="headsets-tab-group">
           <button 
-            className={activeSubTab === 'stock' ? 'primary btn-glow' : ''}
-            onClick={() => setActiveSubTab('stock')}
-            style={activeSubTab !== 'stock' ? {background: 'var(--input-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)'} : {}}
+            type="button"
+            className={`headsets-tab-btn ${activeSubTab === 'stock' ? 'active' : ''}`}
+            onClick={() => handleSubTabChange('stock')}
           >
             Estoque Funcional
           </button>
           <button 
-            className={activeSubTab === 'defects' ? 'primary btn-glow' : ''}
-            onClick={() => setActiveSubTab('defects')}
-            style={activeSubTab !== 'defects' ? {background: 'var(--input-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)'} : {}}
+            type="button"
+            className={`headsets-tab-btn ${activeSubTab === 'defects' ? 'active' : ''}`}
+            onClick={() => handleSubTabChange('defects')}
           >
             Caixas e Danificados
           </button>
           <button 
-            className={activeSubTab === 'history' ? 'primary btn-glow' : ''}
-            onClick={() => setActiveSubTab('history')}
-            style={activeSubTab !== 'history' ? {background: 'var(--input-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)'} : {}}
+            type="button"
+            className={`headsets-tab-btn ${activeSubTab === 'history' ? 'active' : ''}`}
+            onClick={() => handleSubTabChange('history')}
           >
             Histórico de Headsets
           </button>
@@ -251,7 +316,7 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
         <div className="card">
           <h3 className="mb-4">Estoque de Headsets</h3>
           
-          <form onSubmit={handleAddStock} className="flex gap-4 mb-6 flex-wrap items-end">
+          <form onSubmit={handleAddStock} className="flex gap-4 mb-6 flex-wrap items-end headset-form">
             <div className="input-group flex-1">
               <label>Marca / Modelo</label>
               <input required type="text" className="premium-input" placeholder="Ex: Intelbras, Zox" value={newBrand} onChange={e => setNewBrand(e.target.value)} />
@@ -260,7 +325,7 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
               <label>Quantidade</label>
               <input required type="number" min="1" className="premium-input" value={newQuantity} onChange={e => setNewQuantity(e.target.value)} />
             </div>
-            <button type="submit" className="primary btn-glow" style={{height: '42px'}}>Adicionar ao Estoque</button>
+            <button type="submit" className="primary" style={{ height: '38px', padding: '0 18px', fontWeight: 600, borderRadius: 'var(--radius-md)' }}>Adicionar ao Estoque</button>
           </form>
 
           <div className="table-responsive">
@@ -279,12 +344,12 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
                   <tr key={s.id}>
                     <td style={{textTransform: 'capitalize'}}>{s.brand}</td>
                     <td>
-                      <span className="badge" style={{fontSize: '1rem'}}>{s.quantity}</span>
+                      <span className="qty-tag font-mono">{s.quantity} un</span>
                     </td>
                     <td>
-                      <div className="flex gap-2">
-                        <button onClick={() => handleUpdateQuantity(s.id, 1)} className="btn-sm" style={{background: 'var(--primary-color)', color: '#fff'}}>+</button>
-                        <button onClick={() => handleUpdateQuantity(s.id, -1)} className="btn-sm" style={{background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-color)'}}>-</button>
+                      <div className="flex gap-1">
+                        <button onClick={() => handleUpdateQuantity(s.id, 1)} className="btn-qty-action" title="Adicionar">+</button>
+                        <button onClick={() => handleUpdateQuantity(s.id, -1)} className="btn-qty-action" title="Diminuir">-</button>
                       </div>
                     </td>
                   </tr>
@@ -297,25 +362,47 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
 
       {activeSubTab === 'defects' && (
         <div className="flex flex-col gap-4">
-          <div className="card">
-            <h3 className="mb-4">Registrar Headset Danificado</h3>
-            <p className="text-sm text-muted mb-4">Ao registrar um defeito, o sistema reduzirá automaticamente 1 unidade do estoque funcional para reposição, a menos que ele tenha vindo direto da operação.</p>
-            
-            <div className="mb-4">
-              <label className="flex items-center gap-2 cursor-pointer" style={{userSelect: 'none', width: 'fit-content', color: 'var(--text-color)'}}>
-                <input 
-                  type="checkbox" 
-                  checked={fromOperation} 
-                  onChange={e => setFromOperation(e.target.checked)} 
-                  style={{width: '16px', height: '16px'}}
-                />
-                Veio direto da Operação (Não descontar do meu estoque funcional)
-              </label>
+          <div className="card defect-register-card">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                  Registrar Headset com Defeito
+                </h3>
+                <span className="text-muted text-sm">
+                  {fromOperation ? 'Origem: Operação (sem dedução do estoque)' : 'Origem: Troca de posto (deduz 1 do estoque funcional)'}
+                </span>
+              </div>
+
+              {/* Segmented Switch para Seleção de Origem */}
+              <div className="segmented-btn-group">
+                <button
+                  type="button"
+                  className={`segmented-btn ${!fromOperation ? 'active' : ''}`}
+                  onClick={() => setFromOperation(false)}
+                  style={{
+                    background: !fromOperation ? 'var(--primary-color)' : 'transparent',
+                    color: !fromOperation ? '#ffffff' : 'var(--text-muted)'
+                  }}
+                >
+                  📦 Com Reposição (Estoque)
+                </button>
+                <button
+                  type="button"
+                  className={`segmented-btn ${fromOperation ? 'active' : ''}`}
+                  onClick={() => setFromOperation(true)}
+                  style={{
+                    background: fromOperation ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
+                    color: fromOperation ? '#fbbf24' : 'var(--text-muted)'
+                  }}
+                >
+                  🏢 Direto da Operação
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleAddDefect} className="flex gap-4 flex-wrap items-end">
-              <div className="input-group flex-1">
-                <label>Marca / Modelo</label>
+            <form onSubmit={handleAddDefect} className="flex gap-3 flex-wrap items-end headset-form">
+              <div className="input-group flex-1" style={{ minWidth: '180px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Marca / Modelo</label>
                 <input 
                   required 
                   type="text" 
@@ -331,23 +418,24 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
                   ))}
                 </datalist>
               </div>
-              <div className="input-group flex-1">
-                <label>Defeito</label>
-                <input required type="text" className="premium-input" placeholder="Ex: mau contato, microfone" value={defectDesc} onChange={e => setDefectDesc(e.target.value)} />
+              <div className="input-group flex-1" style={{ minWidth: '220px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Defeito Relatado</label>
+                <input required type="text" className="premium-input" placeholder="Ex: Microfone mudo, cabo partido" value={defectDesc} onChange={e => setDefectDesc(e.target.value)} />
               </div>
-              <div className="input-group w-32">
-                <label>Caixa</label>
+              <div className="input-group" style={{ width: '130px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Caixa Destino</label>
                 <input required type="text" className="premium-input" placeholder="Ex: N° 06" value={defectBox} onChange={e => setDefectBox(e.target.value)} />
               </div>
-              <div className="input-group">
-                <label>&nbsp;</label>
-                <button type="submit" className="primary btn-glow btn-danger" style={{height: '42px', padding: '0 24px'}}>Registrar Defeito</button>
+              <div>
+                <button type="submit" className="primary" style={{ height: '42px', padding: '0 20px', fontWeight: 700, borderRadius: 'var(--radius-md)' }}>
+                  + Registrar Defeito
+                </button>
               </div>
             </form>
           </div>
 
           <div className="card">
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4 list-header-responsive">
               <div className="flex items-center gap-4 flex-wrap">
                 <h3>Lista de Danificados e Caixas</h3>
                 <div className="flex gap-2 flex-wrap">
@@ -357,15 +445,28 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
                       {uniqueBoxes.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
-                  <div className="input-group m-0">
+                  <div className="input-group m-0" style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
                     <input 
                       type="text" 
                       className="premium-input" 
-                      placeholder="Filtrar por data..." 
-                      style={{padding: '4px 12px', height: '32px', width: '130px'}} 
+                      placeholder="Filtrar data (ex: 28/07)" 
+                      style={{padding: '4px 26px 4px 10px', height: '32px', width: '160px'}} 
                       value={filterDate} 
                       onChange={e => setFilterDate(e.target.value)} 
                     />
+                    {filterDate && (
+                      <button 
+                        type="button"
+                        onClick={() => setFilterDate('')}
+                        style={{
+                          position: 'absolute', right: '6px', background: 'transparent', 
+                          border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem'
+                        }}
+                        title="Limpar data"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                   <div className="input-group m-0">
                     <select className="premium-input" style={{padding: '4px 12px', height: '32px'}} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
@@ -379,14 +480,14 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
               </div>
               <div className="flex gap-2">
                 <button onClick={handleExportCSV} className="btn-sm" style={{border: '1px solid var(--primary-color)', color: 'var(--primary-color)', background: 'transparent'}}>
-                  📥 Exportar Planilha
+                  Exportar Planilha
                 </button>
                 <button 
                   onClick={() => setShowSendModal(true)} 
                   className="btn-sm" 
                   style={{background: 'var(--surface-color)', border: '1px solid #f59e0b', color: '#f59e0b'}}
                 >
-                  📦 Enviar Caixa
+                  Enviar Caixa
                 </button>
                 <button 
                   onClick={() => setShowReceiveModal(true)} 
@@ -415,8 +516,8 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
                     <tr><td colSpan="5" className="text-center text-muted py-4">Nenhum registro encontrado</td></tr>
                   ) : filteredDefects.map(d => (
                     <tr key={d.id}>
-                      <td style={{whiteSpace: 'nowrap'}}>{d.date}</td>
-                      <td style={{whiteSpace: 'nowrap'}} className="text-muted">{d.returnDate || '-'}</td>
+                      <td style={{whiteSpace: 'nowrap'}}>{new Date(d.date).toLocaleString('pt-BR')}</td>
+                      <td style={{whiteSpace: 'nowrap'}} className="text-muted">{d.returnDate ? new Date(d.returnDate).toLocaleDateString('pt-BR') : '-'}</td>
                       <td style={{textTransform: 'capitalize'}}>{d.brand}</td>
                       <td>{d.defect}</td>
                       <td>
@@ -454,17 +555,23 @@ export default function HeadsetsManager({ stock, setStock, defects, setDefects, 
                 </tr>
               </thead>
               <tbody>
-                {history.length === 0 ? (
-                  <tr><td colSpan="5" className="text-center text-muted py-4">Nenhum histórico registrado ainda.</td></tr>
-                ) : history.map(h => (
-                  <tr key={h.id}>
-                    <td style={{whiteSpace: 'nowrap'}}>{h.date}</td>
-                    <td><span className="badge badge-outline">{h.action}</span></td>
-                    <td style={{textTransform: 'capitalize'}}><strong>{h.brand}</strong></td>
-                    <td><span className="badge" style={{background: 'var(--text-muted)'}}>{h.qty}</span></td>
-                    <td className="text-muted">{h.details}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const headsetEvents = (history || []).filter(h => h.action || h.brand || h.qty);
+                  if (headsetEvents.length === 0) {
+                    return (
+                      <tr><td colSpan="5" className="text-center text-muted py-4">Nenhum histórico de headset registrado ainda.</td></tr>
+                    );
+                  }
+                  return headsetEvents.map(h => (
+                    <tr key={h.id}>
+                      <td style={{whiteSpace: 'nowrap'}}>{new Date(h.date).toLocaleString('pt-BR')}</td>
+                      <td><span className="badge badge-outline">{h.action}</span></td>
+                      <td style={{textTransform: 'capitalize'}}><strong>{h.brand}</strong></td>
+                      <td><span className="qty-tag font-mono">{h.qty || 1} un</span></td>
+                      <td className="text-muted">{h.details}</td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
